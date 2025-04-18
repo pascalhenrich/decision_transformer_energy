@@ -1,0 +1,19 @@
+name: decision-transformer
+channels:
+- pytorch
+dependencies:
+- python
+- pip
+- pip:
+  - torch
+  - torchrl
+  - tensordict 
+  - numpy
+  - pandas
+  - hydra-core
+  - ipykernel
+  - gurobipy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - tqdm
