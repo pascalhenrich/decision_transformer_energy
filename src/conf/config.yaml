@@ -1,0 +1,8 @@
+hydra:
+  run:
+    dir: ${output_path}/${name}
+
+name: test
+output_path: outputs
+model_path: models
+device: cpu
