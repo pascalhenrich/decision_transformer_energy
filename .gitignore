@@ -4,6 +4,8 @@ outputs/
 # Models
 models/
 
+# Large CSV files
+/data/1_processed/*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

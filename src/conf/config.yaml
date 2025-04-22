@@ -6,3 +6,7 @@ name: test
 output_path: outputs
 model_path: models
 device: cpu
+customer: [1]
+env:
+  forecast_horizon: 48
+  init_charge: 0.0
