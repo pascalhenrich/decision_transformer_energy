@@ -40,7 +40,6 @@ class BatteryScheduling(EnvBase):
 
         td_out = TensorDict(
             {
-                'step': step,
                 'soe': torch.tensor(0.0),
                 'prosumption': prosumption,
                 'price': price,
@@ -55,8 +54,9 @@ class BatteryScheduling(EnvBase):
 
 
     def _step(self, td_in):
-        action = td_in['action']
-        step = td_in['step']
+        action = td_in['action'].squeeze()
+        td_in['params', 'step'] += 1
+        step = td_in['params', 'step']
         old_soe = td_in['soe']
         old_cost = td_in['cost']
         params = td_in['params']
@@ -67,13 +67,13 @@ class BatteryScheduling(EnvBase):
         price = price_data[0]
         price_forecast = price_data[1:]
 
-        new_soe = torch.clip(old_soe + action, 0.0, params['battery_capacity'])
+        new_soe = torch.clip(old_soe + action, torch.tensor(0.0), params['battery_capacity'])
         clipped_action = old_soe - new_soe
         penalty_soe  = torch.abs(action - clipped_action)
 
         grid = prosumption - clipped_action
-        grid_buy = grid if grid > 0.0 else 0.0
-        grid_sell = torch.abs(grid) if grid <= 0.0 else 0.0
+        grid_buy = grid if grid > 0.0 else torch.tensor(0.0)
+        grid_sell = torch.abs(grid) if grid <= 0.0 else torch.tensor(0.0)
         
         cost =  (grid_sell-grid_buy)*price
         new_cost = old_cost + cost
@@ -81,7 +81,6 @@ class BatteryScheduling(EnvBase):
 
         td_out = TensorDict(
             {
-                'step': step + 1,
                 'soe': new_soe,
                 'prosumption': prosumption,
                 'price': price,
@@ -110,10 +109,6 @@ class BatteryScheduling(EnvBase):
     
     def _makeSpecs(self, td_param):
         self.observation_spec = Composite(
-            step=Bounded(low = 0,
-                         high = td_param['params', 'max_steps'],
-                         shape=(),
-                         dtype=torch.int64),
             soe=Bounded(low = 0,
                          high = td_param['params', 'battery_capacity'],
                          shape=(),
@@ -143,6 +138,7 @@ class BatteryScheduling(EnvBase):
             {
                 'params': TensorDict(
                     {
+                        'step': torch.tensor(0, dtype=torch.int64),
                         'battery_capacity': self._dataset.getBatteryCapacity(),
                         'max_power': self._dataset.getBatteryCapacity()/2,
                         'max_steps': self._dataset.__len__()

@@ -35,4 +35,4 @@ class EnergyDataset(Dataset):
         return torch.ceil(torch.abs(daily_negative_sums.mean()))
         
     def getBatteryCapacity(self):
-        return self._batteryCapacity
+        return self._batteryCapacity.float()
