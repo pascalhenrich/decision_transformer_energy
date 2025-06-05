@@ -15,7 +15,7 @@ class EnergyDataset(Dataset):
         elif mode == 'eval':
             csv_data = (csv_data.loc[17520:35039]).reset_index(drop=True)
         elif mode == 'test':
-            csv_data = (csv_data.loc[35040:52559]).reset_index(drop=True)
+            csv_data = (csv_data.loc[35087:52559]).reset_index(drop=True)
         dates = csv_data['Date']
         fractional_hours = dates.dt.hour + dates.dt.minute / 60.0
         hour_sin = np.sin(2 * np.pi * fractional_hours / 24)
@@ -34,10 +34,10 @@ class EnergyDataset(Dataset):
     
     def __getitem__(self, idx):
         idx = int(idx)
-        prosumption = torch.tensor(self._data['prosumption'].loc[idx:idx+self._forecast_size].values, dtype=torch.float32)
-        price = torch.tensor(self._data['price'].loc[idx:idx+self._forecast_size].values, dtype=torch.float32)
-        feature = np.array([self._data['sin'][idx:idx+self._forecast_size].to_numpy(),self._data['cos'][idx:idx+self._forecast_size].to_numpy()])
-        feature = torch.tensor(feature, dtype=torch.float32)
+        prosumption = torch.tensor(self._data['prosumption'].loc[idx:idx+self._forecast_size].values, dtype=torch.float64)
+        price = torch.tensor(self._data['price'].loc[idx:idx+self._forecast_size].values, dtype=torch.float64)
+        feature = np.array([self._data['sin'].loc[idx:idx+self._forecast_size].to_numpy(),self._data['cos'].loc[idx:idx+self._forecast_size].to_numpy()])
+        feature = torch.tensor(feature, dtype=torch.float64).transpose(0,1)
         return prosumption, price, feature
     
     def _calcBatteryCapacity(self, csv_data_train, customer):

@@ -11,6 +11,7 @@ class BatteryScheduling(EnvBase):
 
         # Dataset
         self._dataset = dataset
+        self._global_step = 0
 
         # Environment parameters
         td = self._makeParams()
@@ -33,13 +34,16 @@ class BatteryScheduling(EnvBase):
         else:
             td_in['params'] = self._makeParams()['params']
 
+        if self._global_step +1 >= len(self._dataset):
+            self._global_step = 0
+
         step = torch.tensor(0, dtype=torch.int64)
         prosumption_data, price_data, time_data = self._dataset[step]
         prosumption = prosumption_data[0].item()
         prosumption_forecast = prosumption_data[1:]
         price = price_data[0].item()
         price_forecast = price_data[1:]
-        time_feature = torch.tensor([time_data[0][0], time_data[1][0]])
+        time_feature = torch.tensor([time_data[0][0], time_data[0][1]])
 
         td_out = TensorDict(
             {
@@ -66,12 +70,13 @@ class BatteryScheduling(EnvBase):
         old_cost = td_in['cost']
         params = td_in['params']
 
-        prosumption_data, price_data, time_data = self._dataset[step]
+        self._global_step += 1
+        prosumption_data, price_data, time_data = self._dataset[self._global_step]
         prosumption = prosumption_data[0]
         prosumption_forecast = prosumption_data[1:]
         price = price_data[0]
         price_forecast = price_data[1:]
-        time_feature = torch.tensor([time_data[0][0], time_data[1][0]])
+        time_feature = torch.tensor([time_data[0][0], time_data[0][1]])
 
         new_soe = torch.clip(old_soe + action, torch.tensor(0.0), params['battery_capacity'])
         clipped_action = new_soe - old_soe
@@ -81,6 +86,7 @@ class BatteryScheduling(EnvBase):
         
         cost =  grid*price
         new_cost = old_cost + cost
+        # log
         reward = -cost - penalty_soe
 
         td_out = TensorDict(
@@ -95,7 +101,7 @@ class BatteryScheduling(EnvBase):
                 'cost': new_cost,
                 'params': params,
                 'reward': reward,
-                'done': (step + 1) >= params['max_steps'],
+                'done': (step + 1) > params['max_steps'],
             },
             batch_size=td_in.shape,
             device=td_in.device,
@@ -132,11 +138,11 @@ class BatteryScheduling(EnvBase):
             prosumption=Unbounded(dtype=torch.float32, 
                                   shape=()),
             prosumption_forecast=Unbounded(dtype=torch.float32, 
-                                            shape=(10,)),
+                                            shape=(48,)),
             price=Unbounded(dtype=torch.float32,
                             shape=()),
             price_forecast=Unbounded(dtype=torch.float32, 
-                                     shape=(10,)),
+                                     shape=(48,)),
             cost=Unbounded(dtype=torch.float32, 
                            shape=()),
             params=self.make_composite_from_td(td_param['params']),
@@ -158,7 +164,7 @@ class BatteryScheduling(EnvBase):
                     {
                         'battery_capacity': self._dataset.getBatteryCapacity(),
                         'max_power': self._dataset.getBatteryCapacity()/2,
-                        'max_steps': self._dataset.__len__()
+                        'max_steps': 48
                     },
                     batch_size=torch.Size([])
                 )
